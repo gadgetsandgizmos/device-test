@@ -7,7 +7,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mesh_test import select
+from mesh_test import firmware, select
 from mesh_test.changes import changed_files
 from mesh_test.workspace import Workspace
 
@@ -43,7 +43,9 @@ def ws(tmp_path):
     make_repo(tmp_path, "reticulous",
               {"name": "reticulous/reticulous",
                "additional_installs": ["reticulous/iface-lora", {"install": "reticulous/rns", "when": "x"}]},
-              {"test_configs": {"base": "reticulous/reticulous --with spangap/hw-linux",
+              {"generated": ["gen.json"],
+               "test_configs": {"base": "reticulous/reticulous --with spangap/hw-linux",
+                                "catalogue": {"category": "reticulum", "driver": "d.py"},
                                 "variants": {"supe": None, "no-supe": "--kconfig X=y"}},
                "tests": [{"id": "smoke", "type": "sim", "run": "true", "configs": "all",
                           "straddle_deps": ["sim-mesh/sim-mesh"]}]})
@@ -99,6 +101,39 @@ def test_tier_and_configs():
     assert select.in_tier({"tier": "smoke"}, "smoke")
     assert not select.in_tier({"tier": "nightly"}, "smoke")
     assert select.in_tier({"tier": "nightly"}, "nightly")
+
+
+def no_supe(ws):
+    return ws.variants("reticulous/reticulous")["no-supe"]
+
+
+def test_catalogue_entry(ws):
+    e = firmware.entry(no_supe(ws))
+    assert e["category"] == "reticulum" and e["driver"] == "d.py"
+    assert e["target"] == "linux" and e["base"] == "mesh-test-reticulous-no-supe"
+    assert e["invocation"] == "reticulous/reticulous --with spangap/hw-linux --kconfig X=y"
+
+
+def test_cache_key_follows_sources_not_generated_files(ws):
+    reticulous = ws.repos["reticulous/reticulous"].path
+    (reticulous / "gen.json").write_text("{}\n")
+    git(reticulous, "add", "gen.json")
+    git(reticulous, "commit", "-q", "-m", "gen")
+    before = firmware.cache_key(ws, no_supe(ws))
+    (reticulous / "gen.json").write_text('{"a": 1}\n')
+    assert firmware.cache_key(ws, no_supe(ws)) == before
+    assert changed_files(reticulous, "HEAD", ws.generated("reticulous/reticulous")) == set()
+    (ws.repos["reticulous/rns"].path / "x.cpp").write_text("x\n")
+    assert firmware.cache_key(ws, no_supe(ws)) != before
+    assert firmware.cache_key(ws, ws.variants("reticulous/reticulous")["supe"]) != before
+
+
+def test_missing_hard_dependency(tmp_path):
+    make_repo(tmp_path, "app", {"name": "o/app", "requires": ["o/gone"], "additional_installs": ["o/soft"]},
+              {"test_configs": {"base": "o/app", "variants": {"v": None}}})
+    ws = Workspace(tmp_path)
+    v = ws.variants("o/app")["v"]
+    assert firmware.missing_straddles(ws, v) == ["o/gone", "spangap/spangap-core"]
 
 
 def test_changed_files(tmp_path):

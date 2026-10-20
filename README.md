@@ -20,8 +20,11 @@ its last 40 lines.
 
 ## tests.yaml
 
+    generated: [<path>, …]                 build output in tracked files: not a change
+
     test_configs:
       base: <spangap build args shared by every variant>
+      catalogue: {<field>: <value>, …}     extra builds.yaml entry fields
       variants:
         <name>: <extra spangap build args, or empty>
 
@@ -43,3 +46,8 @@ A test runs when its tier is selected and a change touches its own repo
 anything its straddle or build configuration pulls in. A change to
 `spangap/spangap` runs everything. Tests get `MESH_WORKSPACE`, `TEST_OUT`
 and, with a variant, `TEST_FIRMWARE`.
+
+A sim test's variant is built with `spangap make-builds` (dependencies not
+pulled), cached in `cache/firmware/` by the sources it is built from, and
+installed in sim-mesh as `mesh-test-<repo>-<variant>_…`. `--firmware` or
+`local.yaml` overrides it.

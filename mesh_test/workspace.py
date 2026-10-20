@@ -14,6 +14,7 @@ class Variant:
     name: str
     label: str
     build_args: str
+    catalogue: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -22,6 +23,7 @@ class Repo:
     name: str
     deps: list[str] = field(default_factory=list)
     is_straddle: bool = False
+    requires: list[str] = field(default_factory=list)
 
 
 def _remote_name(path):
@@ -51,8 +53,9 @@ class Workspace:
             manifest = child / "straddle.yaml"
             if manifest.is_file():
                 data = yaml.safe_load(manifest.read_text()) or {}
-                deps = _dep_names(data.get("requires")) + _dep_names(data.get("additional_installs"))
-                repo = Repo(child, data.get("name") or _remote_name(child), deps, True)
+                requires = _dep_names(data.get("requires"))
+                deps = requires + _dep_names(data.get("additional_installs"))
+                repo = Repo(child, data.get("name") or _remote_name(child), deps, True, requires)
             else:
                 repo = Repo(child, _remote_name(child))
             self.repos[repo.name] = repo
@@ -62,7 +65,7 @@ class Workspace:
     def repo_for(self, path):
         return self._by_path.get(Path(path).resolve())
 
-    def closure(self, name):
+    def closure(self, name, hard_only=False):
         seen, todo = set(), [name]
         while todo:
             n = todo.pop()
@@ -71,10 +74,13 @@ class Workspace:
             seen.add(n)
             repo = self.repos.get(n)
             if repo:
-                todo.extend(repo.deps)
+                todo.extend(repo.requires if hard_only else repo.deps)
                 if repo.is_straddle:
                     todo.append(FOUNDATION)
         return seen
+
+    def generated(self, name):
+        return set(self.tests_file(name).get("generated") or [])
 
     def tests_file(self, name):
         if name not in self._tests:
@@ -86,7 +92,8 @@ class Workspace:
     def variants(self, owner):
         configs = self.tests_file(owner).get("test_configs") or {}
         base = configs.get("base") or ""
-        return {name: Variant(owner, name, name, f"{base} {args or ''}".strip())
+        catalogue = dict(configs.get("catalogue") or {})
+        return {name: Variant(owner, name, name, f"{base} {args or ''}".strip(), catalogue)
                 for name, args in (configs.get("variants") or {}).items()}
 
     def variants_for(self, repo, test):
@@ -103,7 +110,7 @@ class Workspace:
             if v is None:
                 raise ValueError(f"{repo.name}: test {test['id']}: no test config '{ref}'")
             label = name if owner == repo.name else f"{owner}:{name}"
-            found.append(Variant(owner, name, label, v.build_args))
+            found.append(Variant(owner, name, label, v.build_args, v.catalogue))
         return found
 
     def build_roots(self, variant):

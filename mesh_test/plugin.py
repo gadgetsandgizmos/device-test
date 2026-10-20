@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mesh_test import select
+from mesh_test import firmware, select
 from mesh_test.changes import changed_files
 from mesh_test.workspace import Workspace
 
@@ -46,13 +46,30 @@ class State:
         out = opt("mesh_out")
         self.out = Path(out) if out else HERE / "out" / datetime.now().strftime("%Y%m%d-%H%M%S")
         self._changes = None
+        self._built = {}
 
     @property
     def changes(self):
         if self._changes is None:
-            self._changes = {name: changed_files(repo.path, self.since)
+            self._changes = {name: changed_files(repo.path, self.since, self.ws.generated(name))
                              for name, repo in self.ws.repos.items()}
         return self._changes
+
+    def firmware_for(self, variant):
+        key = (variant.owner, variant.name)
+        if key not in self._built:
+            sim_mesh = self.ws.repos.get("sim-mesh/sim-mesh")
+            if sim_mesh is None:
+                raise firmware.FirmwareError("sim-mesh is not in the workspace")
+            try:
+                self._built[key] = firmware.ensure(self.ws, variant, HERE / "cache" / "firmware",
+                                                   sim_mesh.path / "sim")
+            except firmware.FirmwareError as e:
+                self._built[key] = e
+        result = self._built[key]
+        if isinstance(result, firmware.FirmwareError):
+            raise result
+        return result
 
 
 def pytest_addoption(parser):
@@ -145,11 +162,18 @@ class MeshItem(pytest.Item):
             pytest.skip(f"missing tools: {' '.join(missing)}")
         env = dict(os.environ, MESH_WORKSPACE=str(s.ws.root))
         if self.variant:
-            firmware = (s.firmware.get(self.variant.label)
-                        or s.firmware.get(f"{self.variant.owner}:{self.variant.name}"))
-            if not firmware:
+            name = (s.firmware.get(self.variant.label)
+                    or s.firmware.get(f"{self.variant.owner}:{self.variant.name}"))
+            if not name and self.test.get("type") != "sim":
                 pytest.skip(f"no firmware for {self.variant.label}: --firmware {self.variant.label}=NAME")
-            env["TEST_FIRMWARE"] = firmware
+            if not name:
+                if not shutil.which("spangap"):
+                    pytest.skip("missing tools: spangap (to build firmware)")
+                try:
+                    name = s.firmware_for(self.variant)
+                except firmware.FirmwareError as e:
+                    raise MeshFailure(str(e))
+            env["TEST_FIRMWARE"] = name
         out = s.out / self.repo.path.name / self.name
         out.mkdir(parents=True, exist_ok=True)
         env["TEST_OUT"] = str(out)
