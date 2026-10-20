@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+import importlib
+import os
+import sys
+from pathlib import Path
+
+here = Path(__file__).resolve().parent
+sys.path.insert(0, str(here))
+for module in ("pytest", "yaml"):
+    try:
+        importlib.import_module(module)
+    except ImportError:
+        sys.exit(f"mesh-test: {sys.executable} needs pytest and PyYAML")
+
+import pytest
+
+workspace = Path(os.environ.get("MESH_WORKSPACE") or here.parent).resolve()
+os.environ["MESH_WORKSPACE"] = str(workspace)
+files = [str(p) for p in sorted(workspace.glob("*/tests.yaml"))]
+args = ["-p", "mesh_test.plugin", "-p", "no:cacheprovider", "--noconftest",
+        "-c", str(here / "pytest.ini"), "--rootdir", str(workspace), "-rs"]
+sys.exit(pytest.main(args + files + sys.argv[1:]))

@@ -1,0 +1,6 @@
+tests:
+  - id: unit
+    type: host
+    tier: smoke
+    run: pytest -q -p no:cacheprovider tests
+    tools: [pytest, git]

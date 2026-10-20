@@ -1,0 +1,4 @@
+default_configs: [no-supe]
+hardware: []
+firmware:
+  no-supe: reticulous-stable-sx1262_x86_64_20261012200258
