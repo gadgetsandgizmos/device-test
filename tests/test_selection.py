@@ -43,7 +43,7 @@ def ws(tmp_path):
     make_repo(tmp_path, "reticulous",
               {"name": "reticulous/reticulous",
                "additional_installs": ["reticulous/iface-lora", {"install": "reticulous/rns", "when": "x"}]},
-              {"generated": ["gen.json"],
+              {"generated": ["gen.json"], "not_firmware": ["tests/**", "tests.yaml"],
                "test_configs": {"base": "reticulous/reticulous --with spangap/hw-linux",
                                 "catalogue": {"category": "reticulum", "driver": "d.py"},
                                 "variants": {"supe": None, "no-supe": "--kconfig X=y"}},
@@ -126,6 +126,30 @@ def test_cache_key_follows_sources_not_generated_files(ws):
     (ws.repos["reticulous/rns"].path / "x.cpp").write_text("x\n")
     assert firmware.cache_key(ws, no_supe(ws)) != before
     assert firmware.cache_key(ws, ws.variants("reticulous/reticulous")["supe"]) != before
+
+
+def test_cache_key_ignores_commits_and_tests(ws):
+    reticulous = ws.repos["reticulous/reticulous"].path
+    before = firmware.cache_key(ws, no_supe(ws))
+    (reticulous / "tests").mkdir()
+    (reticulous / "tests" / "smoke.py").write_text("print(1)\n")
+    assert firmware.cache_key(ws, no_supe(ws)) == before
+    git(reticulous, "add", "-A")
+    git(reticulous, "commit", "-q", "-m", "a test")
+    assert firmware.cache_key(ws, no_supe(ws)) == before
+    git(reticulous, "commit", "-q", "--allow-empty", "-m", "nothing")
+    assert firmware.cache_key(ws, no_supe(ws)) == before
+    (reticulous / "README").write_text("changed\n")
+    changed = firmware.cache_key(ws, no_supe(ws))
+    assert changed != before
+    git(reticulous, "commit", "-q", "-am", "readme")
+    assert firmware.cache_key(ws, no_supe(ws)) == changed
+    assert git_status(reticulous) == ""
+
+
+def git_status(path):
+    return subprocess.run(["git", "-C", str(path), "status", "--porcelain"],
+                          capture_output=True, text=True).stdout
 
 
 def test_missing_hard_dependency(tmp_path):

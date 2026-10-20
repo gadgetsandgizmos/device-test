@@ -82,6 +82,9 @@ class Workspace:
     def generated(self, name):
         return set(self.tests_file(name).get("generated") or [])
 
+    def not_firmware(self, name):
+        return set(self.tests_file(name).get("not_firmware") or [])
+
     def tests_file(self, name):
         if name not in self._tests:
             repo = self.repos.get(name)

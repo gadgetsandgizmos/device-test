@@ -21,6 +21,7 @@ its last 40 lines.
 ## tests.yaml
 
     generated: [<path>, …]                 build output in tracked files: not a change
+    not_firmware: [<path>, …]              not in the image: not part of a firmware cache key
 
     test_configs:
       base: <spangap build args shared by every variant>

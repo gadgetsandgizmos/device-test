@@ -3,7 +3,9 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
+import tempfile
 
 import yaml
 
@@ -30,17 +32,27 @@ def entry(variant):
             "invocation": variant.build_args}
 
 
+# Trigger build based on delta of hash of the files that go into the image
 def repo_state(ws, repo):
-    ignore = ws.generated(repo.name)
-    h = hashlib.sha256()
-    h.update(git(repo.path, "rev-parse", "HEAD").stdout.encode())
-    excludes = [f":(exclude){p}" for p in sorted(ignore)]
-    h.update(git(repo.path, "diff", "--binary", "HEAD", "--", ".", *excludes).stdout.encode())
-    untracked = git(repo.path, "ls-files", "--others", "--exclude-standard").stdout.splitlines()
-    for name in sorted(set(untracked) - ignore):
-        h.update(name.encode())
-        h.update((repo.path / name).read_bytes())
-    return h.hexdigest()
+    skip = sorted(ws.generated(repo.name) | ws.not_firmware(repo.name))
+    with tempfile.TemporaryDirectory() as tmp:
+        index = os.path.join(tmp, "index")
+        real = repo.path / git(repo.path, "rev-parse", "--git-path", "index").stdout.strip()
+        if real.is_file():
+            shutil.copyfile(real, index)
+        env = dict(os.environ, GIT_INDEX_FILE=index)
+
+        def run(*args):
+            done = subprocess.run(["git", "-C", str(repo.path), *args], env=env,
+                                  capture_output=True, text=True)
+            if done.returncode:
+                raise FirmwareError(f"{repo.name}: git {args[0]} failed: {done.stderr.strip()}")
+            return done.stdout.strip()
+
+        run("add", "-A", "--", ".")
+        if skip:
+            run("rm", "-r", "--cached", "-q", "--ignore-unmatch", "--", *skip)
+        return run("write-tree")
 
 
 def build_repos(ws, variant):
