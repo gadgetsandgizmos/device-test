@@ -75,6 +75,7 @@ or `local.yaml` overrides it.
       sim_image: {<field>: <value>, …}     how sim-mesh runs the image (see below)
       variants:
         <name>: <extra spangap build args, or empty>
+        <name>: {build: <extra args>, settings: {<key>: <value>, …}, tier: smoke | extended}
 
     tests:
       - id: <name>
@@ -93,7 +94,8 @@ A test runs when its tier is selected and a change touches its own repo
 (within `paths`), anything in `straddle_deps`, or, for sim and hil tests,
 anything its straddle or build configuration pulls in. A change to
 `spangap/spangap` runs everything. Tests get `MESH_WORKSPACE`, `TEST_OUT`
-and, with a variant, `TEST_FIRMWARE`.
+and, with a variant, `TEST_FIRMWARE` and `TEST_SETTINGS` (the variant's
+settings as `key=value` pairs, for the test to apply).
 
 `sim_image:` is only needed by projects whose sim tests build firmware. It
 tells sim-mesh how to run the image: its driver, mesh category, virtual

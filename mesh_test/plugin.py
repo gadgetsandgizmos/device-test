@@ -114,7 +114,7 @@ def pytest_collection_modifyitems(config, items):
     keep, drop = [], []
     for item in items:
         if isinstance(item, MeshItem):
-            wanted = (select.in_tier(item.test, s.tier)
+            wanted = (select.in_tier(item.test, item.variant, s.tier)
                       and select.in_configs(item.variant, s.configs)
                       and (s.run_all or select.is_affected(s.ws, item.repo, item.test, item.variant, s.changes)))
         else:
@@ -181,6 +181,7 @@ class MeshItem(pytest.Item):
                     raise MeshFailure(str(e))
             env["TEST_FIRMWARE"] = name
             self.firmware_name = name
+            env["TEST_SETTINGS"] = " ".join(f"{k}={v}" for k, v in self.variant.settings.items())
         out = s.out / self.repo.path.name / self.name
         out.mkdir(parents=True, exist_ok=True)
         env["TEST_OUT"] = str(out)

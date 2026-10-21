@@ -15,6 +15,8 @@ class Variant:
     label: str
     build_args: str
     sim_image: dict = field(default_factory=dict)
+    settings: dict = field(default_factory=dict)
+    tier: str = "smoke"
 
 
 @dataclass
@@ -96,8 +98,13 @@ class Workspace:
         configs = self.tests_file(owner).get("test_configs") or {}
         base = configs.get("base") or ""
         sim_image = dict(configs.get("sim_image") or {})
-        return {name: Variant(owner, name, name, f"{base} {args or ''}".strip(), sim_image)
-                for name, args in (configs.get("variants") or {}).items()}
+        found = {}
+        for name, spec in (configs.get("variants") or {}).items():
+            spec = spec if isinstance(spec, dict) else {"build": spec}
+            found[name] = Variant(owner, name, name, f"{base} {spec.get('build') or ''}".strip(),
+                                  sim_image, dict(spec.get("settings") or {}),
+                                  spec.get("tier", "smoke"))
+        return found
 
     def variants_for(self, repo, test):
         spec = test.get("configs")
@@ -113,7 +120,7 @@ class Workspace:
             if v is None:
                 raise ValueError(f"{repo.name}: test {test['id']}: no test config '{ref}'")
             label = name if owner == repo.name else f"{owner}:{name}"
-            found.append(Variant(owner, name, label, v.build_args, v.sim_image))
+            found.append(Variant(owner, name, label, v.build_args, v.sim_image, v.settings, v.tier))
         return found
 
     def build_roots(self, variant):

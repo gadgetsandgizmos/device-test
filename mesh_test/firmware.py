@@ -62,9 +62,11 @@ def build_repos(ws, variant):
     return sorted(n for n in names if n in ws.repos)
 
 
+# Variants that differ only in settings share an image
 def cache_key(ws, variant):
     states = {name: repo_state(ws, ws.repos[name]) for name in build_repos(ws, variant)}
-    blob = json.dumps({"entry": entry(variant), "repos": states}, sort_keys=True)
+    built = {k: v for k, v in entry(variant).items() if k not in ("name", "base")}
+    blob = json.dumps({"entry": built, "repos": states}, sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()
 
 

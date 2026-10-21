@@ -30,8 +30,10 @@ def is_affected(ws, repo, test, variant, changes):
     return any(changes.get(n) for n in triggers(ws, repo, test, variant))
 
 
-def in_tier(test, tier):
-    return tier == "extended" or test.get("tier", "smoke") == "smoke"
+def in_tier(test, variant, tier):
+    if tier == "extended":
+        return True
+    return test.get("tier", "smoke") == "smoke" and (variant is None or variant.tier == "smoke")
 
 
 def in_configs(variant, wanted):

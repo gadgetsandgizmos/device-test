@@ -98,9 +98,28 @@ def test_spangap_tool_runs_everything(ws):
 
 
 def test_tier_and_configs():
-    assert select.in_tier({"tier": "smoke"}, "smoke")
-    assert not select.in_tier({"tier": "extended"}, "smoke")
-    assert select.in_tier({"tier": "extended"}, "extended")
+    assert select.in_tier({"tier": "smoke"}, None, "smoke")
+    assert not select.in_tier({"tier": "extended"}, None, "smoke")
+    assert select.in_tier({"tier": "extended"}, None, "extended")
+
+
+def test_mapping_variants(tmp_path):
+    make_repo(tmp_path, "app", {"name": "o/app"},
+              {"test_configs": {"base": "o/app",
+                                "variants": {"plain": "--kconfig X=y",
+                                             "on": {"settings": {"s.a": 1}},
+                                             "off": {"tier": "extended"}}}})
+    ws = Workspace(tmp_path)
+    v = ws.variants("o/app")
+    assert v["plain"].build_args == "o/app --kconfig X=y" and v["plain"].settings == {}
+    assert v["on"].build_args == "o/app" and v["on"].settings == {"s.a": 1}
+    assert v["off"].tier == "extended"
+    test = {"tier": "smoke"}
+    assert select.in_tier(test, v["on"], "smoke")
+    assert not select.in_tier(test, v["off"], "smoke")
+    assert select.in_tier(test, v["off"], "extended")
+    assert firmware.cache_key(ws, v["on"]) == firmware.cache_key(ws, v["off"])
+    assert firmware.cache_key(ws, v["on"]) != firmware.cache_key(ws, v["plain"])
 
 
 def no_supe(ws):
