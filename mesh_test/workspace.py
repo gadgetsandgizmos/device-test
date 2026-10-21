@@ -14,7 +14,7 @@ class Variant:
     name: str
     label: str
     build_args: str
-    catalogue: dict = field(default_factory=dict)
+    sim_image: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -82,8 +82,8 @@ class Workspace:
     def generated(self, name):
         return set(self.tests_file(name).get("generated") or [])
 
-    def not_firmware(self, name):
-        return set(self.tests_file(name).get("not_firmware") or [])
+    def test_only(self, name):
+        return set(self.tests_file(name).get("test_only") or [])
 
     def tests_file(self, name):
         if name not in self._tests:
@@ -95,8 +95,8 @@ class Workspace:
     def variants(self, owner):
         configs = self.tests_file(owner).get("test_configs") or {}
         base = configs.get("base") or ""
-        catalogue = dict(configs.get("catalogue") or {})
-        return {name: Variant(owner, name, name, f"{base} {args or ''}".strip(), catalogue)
+        sim_image = dict(configs.get("sim_image") or {})
+        return {name: Variant(owner, name, name, f"{base} {args or ''}".strip(), sim_image)
                 for name, args in (configs.get("variants") or {}).items()}
 
     def variants_for(self, repo, test):
@@ -113,7 +113,7 @@ class Workspace:
             if v is None:
                 raise ValueError(f"{repo.name}: test {test['id']}: no test config '{ref}'")
             label = name if owner == repo.name else f"{owner}:{name}"
-            found.append(Variant(owner, name, label, v.build_args, v.catalogue))
+            found.append(Variant(owner, name, label, v.build_args, v.sim_image))
         return found
 
     def build_roots(self, variant):

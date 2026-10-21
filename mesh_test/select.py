@@ -31,7 +31,7 @@ def is_affected(ws, repo, test, variant, changes):
 
 
 def in_tier(test, tier):
-    return tier == "nightly" or test.get("tier", "smoke") == "smoke"
+    return tier == "extended" or test.get("tier", "smoke") == "smoke"
 
 
 def in_configs(variant, wanted):

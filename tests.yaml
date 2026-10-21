@@ -2,5 +2,5 @@ tests:
   - id: unit
     type: host
     tier: smoke
-    run: pytest -q -p no:cacheprovider tests
-    tools: [pytest, git]
+    run: .venv/bin/python -m pytest -q -p no:cacheprovider tests
+    tools: [git]

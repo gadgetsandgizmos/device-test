@@ -1,16 +1,38 @@
 #!/usr/bin/env python3
-import importlib
+import hashlib
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 here = Path(__file__).resolve().parent
+venv = here / ".venv"
+venv_python = venv / "bin" / "python"
+requirements = here / "requirements.txt"
+stamp = venv / "requirements.sha256"
+digest = hashlib.sha256(requirements.read_bytes()).hexdigest()
+
+
+def setup(reason):
+    count = sum(1 for line in requirements.read_text().splitlines() if line.strip())
+    print(f"mesh-test: {reason}: installing {count} packages from PyPI into .venv", file=sys.stderr)
+    subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
+    subprocess.run([str(venv_python), "-m", "pip", "install", "-q",
+                    "-r", str(requirements)], check=True)
+    stamp.write_text(digest)
+
+
+if sys.argv[1:2] == ["--refresh"]:
+    setup("--refresh")
+    sys.exit(0)
+if Path(sys.prefix).resolve() != venv.resolve():
+    if not venv_python.exists():
+        setup("first run")
+    elif not stamp.is_file() or stamp.read_text() != digest:
+        setup("requirements.txt changed")
+    os.execv(str(venv_python), [str(venv_python), __file__, *sys.argv[1:]])
+
 sys.path.insert(0, str(here))
-for module in ("pytest", "yaml"):
-    try:
-        importlib.import_module(module)
-    except ImportError:
-        sys.exit(f"mesh-test: {sys.executable} needs pytest and PyYAML")
 
 import pytest
 

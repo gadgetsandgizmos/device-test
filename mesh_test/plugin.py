@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mesh_test import firmware, select
+from mesh_test import firmware, report, select
 from mesh_test.changes import changed_files
 from mesh_test.workspace import Workspace
 
@@ -74,7 +74,7 @@ class State:
 
 def pytest_addoption(parser):
     group = parser.getgroup("mesh-test")
-    group.addoption("--tier", dest="mesh_tier", choices=["smoke", "nightly"], default="smoke")
+    group.addoption("--tier", dest="mesh_tier", choices=["smoke", "extended"], default="smoke")
     group.addoption("--all", dest="mesh_all", action="store_true")
     group.addoption("--since", dest="mesh_since", default="origin/main")
     group.addoption("--hardware", dest="mesh_hardware", default=None)
@@ -83,8 +83,14 @@ def pytest_addoption(parser):
     group.addoption("--out", dest="mesh_out", default=None)
 
 
+@pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
     config.mesh = State(config)
+    if not config.option.htmlpath:
+        config.option.htmlpath = str(config.mesh.out / "report.html")
+        config.option.self_contained_html = True
+    config.option.css = [*config.option.css, str(HERE / "report.css")]
+    config.pluginmanager.register(report, "mesh-test-report")
     for name in ("host", "sim", "hil"):
         config.addinivalue_line("markers", name)
 
@@ -174,10 +180,12 @@ class MeshItem(pytest.Item):
                 except firmware.FirmwareError as e:
                     raise MeshFailure(str(e))
             env["TEST_FIRMWARE"] = name
+            self.firmware_name = name
         out = s.out / self.repo.path.name / self.name
         out.mkdir(parents=True, exist_ok=True)
         env["TEST_OUT"] = str(out)
         log = out / "output.log"
+        self.log = log
         timeout = self.test.get("timeout", DEFAULT_TIMEOUT)
         with open(log, "wb") as fh:
             proc = subprocess.Popen(cmd, cwd=self.repo.path, env=env, stdin=subprocess.DEVNULL,

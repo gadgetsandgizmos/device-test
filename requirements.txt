@@ -1,0 +1,10 @@
+iniconfig==2.3.1
+Jinja2==3.1.6
+MarkupSafe==3.0.4
+packaging==26.3
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==9.1.1
+pytest-html==4.2.0
+pytest-metadata==3.1.1
+PyYAML==6.0.3

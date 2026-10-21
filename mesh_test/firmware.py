@@ -24,7 +24,7 @@ class FirmwareError(Exception):
 
 def entry(variant):
     short = variant.owner.rpartition("/")[2]
-    return {**variant.catalogue,
+    return {**variant.sim_image,
             "name": f"sim-{variant.name}",
             "target": "linux",
             "arch": ARCHES.get(platform.machine(), platform.machine()),
@@ -34,7 +34,7 @@ def entry(variant):
 
 # Trigger build based on delta of hash of the files that go into the image
 def repo_state(ws, repo):
-    skip = sorted(ws.generated(repo.name) | ws.not_firmware(repo.name))
+    skip = sorted(ws.generated(repo.name) | ws.test_only(repo.name))
     with tempfile.TemporaryDirectory() as tmp:
         index = os.path.join(tmp, "index")
         real = repo.path / git(repo.path, "rev-parse", "--git-path", "index").stdout.strip()

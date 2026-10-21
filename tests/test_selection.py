@@ -43,9 +43,9 @@ def ws(tmp_path):
     make_repo(tmp_path, "reticulous",
               {"name": "reticulous/reticulous",
                "additional_installs": ["reticulous/iface-lora", {"install": "reticulous/rns", "when": "x"}]},
-              {"generated": ["gen.json"], "not_firmware": ["tests/**", "tests.yaml"],
+              {"generated": ["gen.json"], "test_only": ["tests/**", "tests.yaml"],
                "test_configs": {"base": "reticulous/reticulous --with spangap/hw-linux",
-                                "catalogue": {"category": "reticulum", "driver": "d.py"},
+                                "sim_image": {"category": "reticulum", "driver": "d.py"},
                                 "variants": {"supe": None, "no-supe": "--kconfig X=y"}},
                "tests": [{"id": "smoke", "type": "sim", "run": "true", "configs": "all",
                           "straddle_deps": ["sim-mesh/sim-mesh"]}]})
@@ -99,8 +99,8 @@ def test_spangap_tool_runs_everything(ws):
 
 def test_tier_and_configs():
     assert select.in_tier({"tier": "smoke"}, "smoke")
-    assert not select.in_tier({"tier": "nightly"}, "smoke")
-    assert select.in_tier({"tier": "nightly"}, "nightly")
+    assert not select.in_tier({"tier": "extended"}, "smoke")
+    assert select.in_tier({"tier": "extended"}, "extended")
 
 
 def no_supe(ws):
