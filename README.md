@@ -89,6 +89,7 @@ or `local.yaml` overrides it.
         configs: all | [<variant> | <straddle>:<variant>, …]   which variants to run it with; all = every variant
         hardware: [<tag>, …]               hardware tags the test needs (hil tests only)
         timeout: <seconds>                 default 1800
+        expect: {<metric>: "<op> <number>", …}   pass/fail on the test's results.json (see below)
 
 A test runs when its tier is selected and a change touches its own repo
 (within `paths`), anything in `straddle_deps`, or, for sim and hil tests,
@@ -96,6 +97,14 @@ anything its straddle or build configuration pulls in. A change to
 `spangap/spangap` runs everything. Tests get `MESH_WORKSPACE`, `TEST_OUT`
 and, with a variant, `TEST_FIRMWARE` and `TEST_SETTINGS` (the variant's
 settings as `key=value` pairs, for the test to apply).
+
+A test can report metrics by writing `$TEST_OUT/results.json`: one flat JSON
+object of named values, with dotted names and the unit in the name (e.g.
+`delivery.proven_ratio`, `latency.proven_s.p90`). `expect:` judges them
+after the run, each as `<op> <number>` with `>=`, `<=`, `>`, `<`, `==` or
+`!=` (e.g. `delivery.proven_ratio: ">= 0.95"`). A metric that is expected
+but not reported fails the test. mesh-test's HTML report
+(`out/<run>/report.html`) shows every metric and each expectation's verdict.
 
 `sim_image:` is only needed by projects whose sim tests build firmware. It
 tells sim-mesh how to run the image: its driver, mesh category, virtual

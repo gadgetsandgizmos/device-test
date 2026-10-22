@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mesh_test import firmware, report, select
+from mesh_test import expect, firmware, report, select
 from mesh_test.changes import changed_files
 from mesh_test.workspace import Workspace
 
@@ -197,8 +197,16 @@ class MeshItem(pytest.Item):
                 os.killpg(proc.pid, signal.SIGKILL)
                 proc.wait()
                 raise MeshFailure(f"timed out after {timeout} s; output: {log}\n{_tail(log)}")
+        self.results = expect.load(out / "results.json")
+        try:
+            self.verdicts = expect.judge(self.test.get("expect"), self.results)
+        except expect.ExpectError as e:
+            raise MeshFailure(str(e))
         if code:
             raise MeshFailure(f"exit {code}; output: {log}\n{_tail(log)}")
+        failed = [v for v in self.verdicts if not v["ok"]]
+        if failed:
+            raise MeshFailure("; ".join(expect.describe(v) for v in failed))
 
     def repr_failure(self, excinfo):
         if isinstance(excinfo.value, MeshFailure):

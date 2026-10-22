@@ -55,10 +55,33 @@ def pytest_runtest_makereport(item, call):
         "log": str(log) if log else "",
         "stages": STAGE.findall(text),
         "tail": "\n".join(text.splitlines()[-LOG_LINES:]),
+        "results": getattr(item, "results", None) or {},
+        "verdicts": getattr(item, "verdicts", None) or [],
     }
+    extras = []
     if text:
-        report.extras = [pytest_html.extras.text(text[-EXTRA_CHARS:], name="output.log")]
+        extras.append(pytest_html.extras.text(text[-EXTRA_CHARS:], name="output.log"))
+    if report.mesh["results"]:
+        extras.append(pytest_html.extras.json(report.mesh["results"], name="results.json"))
+    report.extras = extras
     return report
+
+
+def _metrics_table(results, verdicts):
+    judged = {v["name"]: v for v in verdicts}
+    names = list(judged) + [n for n in results if n not in judged]
+    rows = []
+    for name in names:
+        v = judged.get(name)
+        got = results.get(name)
+        value = "not reported" if got is None else (f"{got:.4g}" if isinstance(got, float) else str(got))
+        mark = "" if v is None else ("PASS" if v["ok"] else "FAIL")
+        cls = "" if v is None else ("mesh-pass" if v["ok"] else "mesh-fail")
+        rows.append(f'<tr class="{cls}"><td>{html.escape(name)}</td><td>{html.escape(value)}</td>'
+                    f'<td>{html.escape(v["rule"]) if v else ""}</td>'
+                    f'<td>{f"<span class=mesh-verdict>{mark}</span>" if mark else ""}</td></tr>')
+    return ('<table class="mesh-stages"><tr><th>Metric</th><th>Value</th><th>Expected</th>'
+            f'<th>Verdict</th></tr>{"".join(rows)}</table>')
 
 
 def pytest_html_results_table_header(cells):
@@ -113,6 +136,8 @@ def pytest_html_results_table_html(report, data):
             for n, stage, verdict, found in m["stages"])
         parts.append('<table class="mesh-stages"><tr><th>#</th><th>Stage</th><th>Verdict</th>'
                      f'<th>What it found</th></tr>{rows}</table>')
+    if m.get("results") or m.get("verdicts"):
+        parts.append(_metrics_table(m.get("results") or {}, m.get("verdicts") or []))
     if m["tail"]:
         parts.append(f'<div class="mesh-logpath">{html.escape(m["log"])} · last {LOG_LINES} lines</div>'
                      f'<div class="mesh-log">{html.escape(m["tail"])}</div>')
