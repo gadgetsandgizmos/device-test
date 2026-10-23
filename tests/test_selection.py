@@ -7,9 +7,9 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mesh_test import firmware, select
-from mesh_test.changes import changed_files
-from mesh_test.workspace import Workspace
+from device_test import firmware, select
+from device_test.changes import changed_files
+from device_test.workspace import Workspace
 
 GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@t"]
 
@@ -129,7 +129,7 @@ def no_supe(ws):
 def test_catalogue_entry(ws):
     e = firmware.entry(no_supe(ws))
     assert e["category"] == "reticulum" and e["driver"] == "d.py"
-    assert e["target"] == "linux" and e["base"] == "mesh-test-reticulous-no-supe"
+    assert e["target"] == "linux" and e["base"] == "device-test-reticulous-no-supe"
     assert e["invocation"] == "reticulous/reticulous --with spangap/hw-linux --kconfig X=y"
 
 

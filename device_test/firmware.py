@@ -9,7 +9,7 @@ import tempfile
 
 import yaml
 
-from mesh_test.changes import git
+from device_test.changes import git
 
 SPANGAP = "spangap/spangap"
 BUILD_TIMEOUT = 3600
@@ -28,7 +28,7 @@ def entry(variant):
             "name": f"sim-{variant.name}",
             "target": "linux",
             "arch": ARCHES.get(platform.machine(), platform.machine()),
-            "base": f"mesh-test-{short}-{variant.name}",
+            "base": f"device-test-{short}-{variant.name}",
             "invocation": variant.build_args}
 
 
@@ -110,7 +110,7 @@ def ensure(ws, variant, cache_root, sim):
         raise FirmwareError(f"not in the workspace, so {variant.label} can't be built: "
                             + ", ".join(missing))
     cache_dir.mkdir(parents=True, exist_ok=True)
-    catalogue = {"project": "mesh-test", "url": "", "builds": [entry(variant)]}
+    catalogue = {"project": "device-test", "url": "", "builds": [entry(variant)]}
     (cache_dir / "builds.yaml").write_text(yaml.safe_dump(catalogue, sort_keys=False))
     log = cache_dir / "build.log"
     env = dict(os.environ, SPANGAP_NO_PULL="1")

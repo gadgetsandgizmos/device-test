@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from mesh_test import expect, firmware, report, select
-from mesh_test.changes import changed_files
-from mesh_test.workspace import Workspace
+from device_test import expect, firmware, report, select
+from device_test.changes import changed_files
+from device_test.workspace import Workspace
 
 HERE = Path(__file__).resolve().parent.parent
 DEFAULT_TIMEOUT = 1800
@@ -73,7 +73,7 @@ class State:
 
 
 def pytest_addoption(parser):
-    group = parser.getgroup("mesh-test")
+    group = parser.getgroup("device-test")
     group.addoption("--tier", dest="mesh_tier", choices=["smoke", "extended"], default="smoke")
     group.addoption("--all", dest="mesh_all", action="store_true")
     group.addoption("--since", dest="mesh_since", default="origin/main")
@@ -90,7 +90,7 @@ def pytest_configure(config):
         config.option.htmlpath = str(config.mesh.out / "report.html")
         config.option.self_contained_html = True
     config.option.css = [*config.option.css, str(HERE / "report.css")]
-    config.pluginmanager.register(report, "mesh-test-report")
+    config.pluginmanager.register(report, "device-test-report")
     for name in ("host", "sim", "hil"):
         config.addinivalue_line("markers", name)
 
@@ -99,7 +99,7 @@ def pytest_report_header(config):
     s = config.mesh
     changed = sorted(name for name, files in s.changes.items() if files)
     scope = "every test (--all)" if s.run_all else f"changes since {s.since}"
-    return [f"mesh-test: tier {s.tier}, {scope}",
+    return [f"device-test: tier {s.tier}, {scope}",
             f"changed repos: {', '.join(changed) or 'none'}",
             f"output: {s.out}"]
 

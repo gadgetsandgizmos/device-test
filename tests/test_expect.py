@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mesh_test import expect
+from device_test import expect
 
 
 def test_rules_pass_and_fail():

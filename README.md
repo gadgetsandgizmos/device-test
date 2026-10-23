@@ -1,11 +1,11 @@
-# mesh-test
+# device-test
 
 Test runner for the tests that repos in a spangap workspace declare in their `tests.yaml`.
 Only runs tests that could be affected by current changes, and are allowed by current bench hardware.
 
 ## Usage
 
-    ./mesh-test [options]
+    ./device-test [options]
 
 Every option is optional. With none, it runs the smoke tests that changes
 since `origin/main` (committed or not) could affect.
@@ -24,7 +24,7 @@ since `origin/main` (committed or not) could affect.
 | `--refresh` | reinstall `.venv` (automatic on first run and when `requirements.txt` changes) | |
 
 Test ids are the `id:`s in each repo's
-`tests.yaml`; `./mesh-test --collect-only -q` lists them.
+`tests.yaml`; `./device-test --collect-only -q` lists them.
 Variants are the names under `test_configs: variants:` in a repo's `tests.yaml` (e.g. supe / no-supe in reticulous).
 `local.yaml` holds per-machine defaults; start from `local.example.yaml`.
 
@@ -32,18 +32,18 @@ Variants are the names under `test_configs: variants:` in a repo's `tests.yaml` 
 
 | To… | Run |
 |---|---|
-| run smoke tests in modules that are affected by your changes | `./mesh-test` |
-| include the longer tests | `./mesh-test --tier extended` |
-| run everything, including tests from modules that don't depend on your changes | `./mesh-test --tier extended --all` |
-| run one test, e.g. `supe-host` | `./mesh-test --all -k supe-host` |
-| see which tests would run, and their ids | `./mesh-test --collect-only -q` |
+| run smoke tests in modules that are affected by your changes | `./device-test` |
+| include the longer tests | `./device-test --tier extended` |
+| run everything, including tests from modules that don't depend on your changes | `./device-test --tier extended --all` |
+| run one test, e.g. `supe-host` | `./device-test --all -k supe-host` |
+| see which tests would run, and their ids | `./device-test --collect-only -q` |
 
 ## What a run does
 
 1. The launcher sets up `.venv` if it's missing or out of date, restarts
    itself in it, collects every `*/tests.yaml` in
-   the workspace (`MESH_WORKSPACE`, else mesh-test's parent) and runs pytest
-   with the mesh-test plugin.
+   the workspace (`MESH_WORKSPACE`, else device-test's parent) and runs pytest
+   with the device-test plugin.
 2. Each test becomes one pytest test. A test with `configs:` becomes one per
    variant.
 3. Tests are dropped if they're outside the chosen tier or variants, or,
@@ -62,7 +62,7 @@ A variant's image is cached in `cache/firmware/`, keyed by a hash of the
 files that go into it (git tree IDs, minus `generated:` and `test_only:`
 paths) and its build arguments. On a miss it is built with
 `spangap make-builds` (dependencies not pulled, `.spangap-build` restored)
-and installed in sim-mesh as `mesh-test-<repo>-<variant>_…`. `--firmware`
+and installed in sim-mesh as `device-test-<repo>-<variant>_…`. `--firmware`
 or `local.yaml` overrides it.
 
 ## tests.yaml
@@ -103,7 +103,7 @@ object of named values, with dotted names and the unit in the name (e.g.
 `delivery.proven_ratio`, `latency.proven_s.p90`). `expect:` judges them
 after the run, each as `<op> <number>` with `>=`, `<=`, `>`, `<`, `==` or
 `!=` (e.g. `delivery.proven_ratio: ">= 0.95"`). A metric that is expected
-but not reported fails the test. mesh-test's HTML report
+but not reported fails the test. device-test's HTML report
 (`out/<run>/report.html`) shows every metric and each expectation's verdict.
 
 `sim_image:` is only needed by projects whose sim tests build firmware. It

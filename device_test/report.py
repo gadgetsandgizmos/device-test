@@ -22,7 +22,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_html_report_title(report):
-    report.title = f"mesh-test · {datetime.now():%Y-%m-%d %H:%M}"
+    report.title = f"device-test · {datetime.now():%Y-%m-%d %H:%M}"
 
 
 def pytest_html_results_summary(prefix, summary, postfix, session):

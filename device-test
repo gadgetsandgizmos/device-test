@@ -15,7 +15,7 @@ digest = hashlib.sha256(requirements.read_bytes()).hexdigest()
 
 def setup(reason):
     count = sum(1 for line in requirements.read_text().splitlines() if line.strip())
-    print(f"mesh-test: {reason}: installing {count} packages from PyPI into .venv", file=sys.stderr)
+    print(f"device-test: {reason}: installing {count} packages from PyPI into .venv", file=sys.stderr)
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
     subprocess.run([str(venv_python), "-m", "pip", "install", "-q",
                     "-r", str(requirements)], check=True)
@@ -39,6 +39,6 @@ import pytest
 workspace = Path(os.environ.get("MESH_WORKSPACE") or here.parent).resolve()
 os.environ["MESH_WORKSPACE"] = str(workspace)
 files = [str(p) for p in sorted(workspace.glob("*/tests.yaml"))]
-args = ["-p", "mesh_test.plugin", "-p", "no:cacheprovider", "--noconftest",
+args = ["-p", "device_test.plugin", "-p", "no:cacheprovider", "--noconftest",
         "-c", str(here / "pytest.ini"), "--rootdir", str(workspace), "-rs"]
 sys.exit(pytest.main(args + files + sys.argv[1:]))
