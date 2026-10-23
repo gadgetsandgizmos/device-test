@@ -100,7 +100,7 @@ settings as `key=value` pairs, for the test to apply).
 
 A test can report metrics by writing `$TEST_OUT/results.json`: one flat JSON
 object of named values, with dotted names and the unit in the name (e.g.
-`delivery.proven_ratio`, `latency.proven_s.p90`). `expect:` judges them
+`delivery.proven_ratio`, `latency.delivered_s.p90`). `expect:` judges them
 after the run, each as `<op> <number>` with `>=`, `<=`, `>`, `<`, `==` or
 `!=` (e.g. `delivery.proven_ratio: ">= 0.95"`). A metric that is expected
 but not reported fails the test. device-test's HTML report
